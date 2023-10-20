@@ -1,111 +1,58 @@
-
-# from langchain.llms import OpenAI
-from pandasai import SmartDataframe
-from pandasai.llm import OpenAI
-from pandasai.callbacks import StdoutCallback
-from pandasai.llm import OpenAI
+from dotenv import load_dotenv
+import os
 import streamlit as st
 import pandas as pd
-import os
-from pandasai_app.components.faq import faq
-
-file_formats = {
-    "csv": pd.read_csv,
-    "xls": pd.read_excel,
-    "xlsx": pd.read_excel,
-    "xlsm": pd.read_excel,
-    "xlsb": pd.read_excel,
-}
-
-def clear_submit():
-    """
-    Clear the Submit Button State
-    Returns:
-
-    """
-    st.session_state["submit"] = False
+from pandasai import PandasAI
+#from pandasai.llm import AzureOpenAI
+import matplotlib.pyplot as plt
 
 
-@st.cache_data(ttl="2h")
-def load_data(uploaded_file):
-    try:
-        ext = os.path.splitext(uploaded_file.name)[1][1:].lower()
-    except:
-        ext = uploaded_file.split(".")[-1]
-    if ext in file_formats:
-        return file_formats[ext](uploaded_file)
-    else:
-        st.error(f"Unsupported file format: {ext}")
-        return None
+#load_dotenv()
 
+#API_KEY = os.environ['OPENAI_API_KEY']
 
-st.set_page_config(page_title="PandasAI ", page_icon="🐼")
-st.title("🐼 PandasAI: Chat with CSV")
+from pandasai.llm import AzureOpenAI
 
-uploaded_file = st.file_uploader(
-    "Upload a Data file",
-    type=list(file_formats.keys()),
-    help="Various File formats are Support",
-    on_change=clear_submit,
+llm = AzureOpenAI(
+    api_token="f769445c82844edda56668cb92806c21",
+    api_base="https://aoiaipsi.openai.azure.com",
+    api_version="2023-07-01-preview",
+    deployment_name="gpt-35-turbo-0613"
 )
 
-if uploaded_file:
-    df = load_data(uploaded_file)
+#llm = OpenAI(api_token=API_KEY)
+pandas_ai = PandasAI(llm)
 
-openai_api_key = st.sidebar.text_input("OpenAI API Key",
-                                        type="password",
-                                        placeholder="Paste your OpenAI API key here (sk-...)")
 
-with st.sidebar:
-        st.markdown("---")
-        st.markdown(
-            "## How to use\n"
-            "1. Enter your [OpenAI API key](https://platform.openai.com/account/api-keys) below🔑\n"  # noqa: E501
-            "2. Upload a csv file with data📄\n"
-            "3. A csv file is read as Pandas Dataframe📄\n"
-            "4. Ask a question about to make dataframe conversational💬\n"
-        )
+st.title("Data visualization app Using PandasAI")
+uploaded_file = st.file_uploader("upload a files", type=['.csv','.db'])
 
-        st.markdown("---")
-        st.markdown("# About")
-        st.markdown(
-            "📖Pandasai App allows you to ask questions about your "
-            "csv / dataframe and get accurate answers"
-        )
-        st.markdown(
-            "Pandasai is in active development so is this tool."
-            "You can contribute to the project on [GitHub]() "  # noqa: E501
-            "with your feedback and suggestions💡"
-        )
-        st.markdown("Made by [DR. AMJAD RAZA](https://www.linkedin.com/in/amjadraza/)")
-        st.markdown("---")
+if uploaded_file is not None:
+    
+    df = pd.read_csv(uploaded_file)
+    st.write(df.head(3))
+    
+    prompt = st.text_area("Enter your prompt:")
+    
+    if st.button("Generate"):
+        if prompt:
+            with st.spinner("Generating answer....."):
+                st.write(pandas_ai.run(df,prompt=prompt))
+        else:
+            st.warning("please enter a prompt")
+    
+    
+    
+    
+    chart_type = st.sidebar.selectbox("Choose a chart type", ["Bar Chart", "Line Chart", "Pie Chart"])
+    if chart_type == "Bar Chart":
 
-        faq()
+        st.bar_chart(df.head(5))
 
-if "messages" not in st.session_state or st.sidebar.button("Clear conversation history"):
-    st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
+    elif chart_type == "Line Chart":
 
-for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
+        st.line_chart(df.head(5))
 
-if prompt := st.chat_input(placeholder="What is this data about?"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").write(prompt)
+    elif chart_type == "Pie Chart":
 
-    if not openai_api_key:
-        st.info("Please add your OpenAI API key to continue.")
-        st.stop()
-
-    #PandasAI OpenAI Model
-    llm = OpenAI(api_token=openai_api_key)
-    # llm = OpenAI(api_token=openai_api_key)
-
-    sdf = SmartDataframe(df, config = {"llm": llm,
-                                        "enable_cache": False,
-                                        "conversational": True,
-                                        "callback": StdoutCallback()})
-
-    with st.chat_message("assistant"):
-        response = sdf.chat(st.session_state.messages)
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.write(response)  
+        st.pie_chart(df)
