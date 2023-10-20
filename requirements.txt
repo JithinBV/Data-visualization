@@ -1,2 +1,3 @@
 streamlit
 pandasai
+pandasai_app
