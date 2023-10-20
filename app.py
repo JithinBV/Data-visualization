@@ -25,7 +25,7 @@ pandas_ai = PandasAI(llm)
 
 
 st.title("Data visualization app Using PandasAI")
-uploaded_file = st.file_uploader("upload a files", type=['.csv','.db'])
+uploaded_file = st.file_uploader("upload a files", accept_multiple_files=True, type=['.csv','.db'])
 
 if uploaded_file is not None:
     
