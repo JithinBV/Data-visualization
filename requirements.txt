@@ -1,3 +1,3 @@
 streamlit
 pandasai
-pandasai_app
+python-dotenv
